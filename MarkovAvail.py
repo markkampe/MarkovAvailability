@@ -8,7 +8,6 @@
 """
 
 # TODO
-#   figure out how to add support for a dictionary
 #   can I get graph_from_dot_file (or a friend) to read stdin?
 #
 
@@ -312,7 +311,7 @@ if __name__ == '__main__':
 
     # process the command line arguments
     from optparse import OptionParser
-    parser = OptionParser(usage="usage: %prog [options]")
+    parser = OptionParser(usage="usage: %prog [options] input_file [dictionary]")
     parser.add_option("-d", "--debug", type="int", dest="debug",
                       default="0")
     parser.add_option("-D", "--dictionary", type="string",
