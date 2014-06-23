@@ -86,7 +86,7 @@ class MarkovAvail:
             print("    %s -> %s [%s=%d]" % (source, dest, label, value))
         self.rates[self.stateNums[source]][self.stateNums[dest]] = value
 
-    def __init__(self, graph, values, debug=0):
+    def __init__(self, graph, values=None, debug=0):
         """ process graph to extract states and transition rates """
 
         # initialize all the class attributes
@@ -157,7 +157,7 @@ class MarkovAvail:
                 else:
                     v = 1E9 / timeconvert(x, 60*60)
                     self.addTransition(s, d, l, v)
-            elif l in values:
+            elif values is not None and l in values:   # value in dictionary
                 x = values[l]
                 if x.isdigit():             # a straight number (rate)
                     v = int(x)
@@ -215,7 +215,7 @@ class MarkovAvail:
             self.occupancy[s] = l[s][0]
 
 
-def processFile(filename, dictionary, debug):
+def processFile(filename, dictionary=None, debug=0):
     """
         parse a file, solve the model, print out the results
     """
@@ -311,7 +311,8 @@ if __name__ == '__main__':
 
     # process the command line arguments
     from optparse import OptionParser
-    parser = OptionParser(usage="usage: %prog [options] input_file [dictionary]")
+    parser = OptionParser(usage=
+                          "usage: %prog [options] input_file [dictionary]")
     parser.add_option("-d", "--debug", type="int", dest="debug",
                       default="0")
     parser.add_option("-D", "--dictionary", type="string",
