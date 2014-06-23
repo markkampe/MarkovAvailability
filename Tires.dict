@@ -1,0 +1,20 @@
+#
+# sample data dictionary for Markov model transition rates
+#
+#	This file shows how transition rates can be supplied in a
+#	separate file from the basic Markov model.  This is useful
+#	because the basic models tend to be fairly stable, while the
+#	rates change with the time of day (different assumptions,
+#	new data, etc).
+
+//	comment lines can be preceded with sharps or slashes
+flat	400d		# how often we expect to get a flat
+tow	2h		# how long it takes to get a tow and repair a flat
+leak	52083		# FIT rate for spares developing spontaneous leaks
+
+# test: make sure we ignore lines containing only a single token
+ignored
+
+# test: setting a parameter that will never be used
+unused	0
+

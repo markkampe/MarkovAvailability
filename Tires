@@ -1,25 +1,41 @@
 # Markov Availability Model
 #   sample model - car tires and spare
 #
-# format:
-#   this file is in the graphviz dot (directed graph) language
+# processing this file:
+#	to draw the graph
+#		dot -O -T png Tires
+#	to solve the model
+#		python MarkovAvail.py Tires Tires.dict
 #
-#   additional node properties:
+# format of this file:
+#   This file is in the graphviz dot (directed graph) language.
+#   The most interesting lines describe nodes and edges.
+#	node [attributes]; 
+#	    names nodes with those attributes
+#		attribute: shape
+#		attribute: color
+#	nodename -> nodename [attributes];
+#		attribute: label
+#
+#   additional node properties for Markov models:
 #       state = <string>        avaialibility class (e.g. up/down)
-#   additional edge properties:
+#
+#   additional edge properties for Markov models:
+#       fits = <number>         FIT rate
 #       rate = <number>         FIT rate
 #       time = <number><unit>   interval
-#   units:
-#       y ...   years
-#       w ...   weeks
-#       d ...   days
-#       h ...   hours
-#       m ...   minutes
-#       s ...   seconds
+#   		time unit suffixes
+#       	    y ...   years
+#       	    w ...   weeks
+#       	    d ...   days
+#       	    h ...   hours
+#       	    m ...   minutes
+#       	    s ...   seconds
 #
 # NOTE:
-#   all of these rates are embedded in this file
-#   the next version will support a seprate dictionary
+#   these examples exercise multiple rate syntaxes
+#   if no time/rate is specified, the value is to be found in an
+#   external dictionary
 #
 digraph Tires {	
 	// general layout
@@ -29,7 +45,7 @@ digraph Tires {
 	// node definitions
 	node [ fixedsize = true, height = 1.25 ];
 	node [ shape = doublecircle color = green ];
-		OK			            [ state = "up" ];
+		OK			        [ state = "up" ];
 
 	node [ shape = circle color = orange ];
 		"bad spare"		        [ state = "compromised" ];
@@ -40,17 +56,17 @@ digraph Tires {
 		"two flats"		        [ state = "down" ];
 
 	// transitions
-	OK -> "bad spare"		    	[ label = "leak"    rate = "52083" ];
+	OK -> "bad spare"		    	[ label = "leak" ];
 	OK -> "one flat"		    	[ label = "flat"    time = "400d" ];
 	OK -> "two flats"		    	[ label = "multi"   time = "27y" ];
 
-	"bad spare" -> "two flats"		[ label = "flat"    rate = 182295 ];
+	"bad spare" -> "two flats"		[ label = "flat"    fits = 182295 ];
 	"bad spare" -> "no spare"		[ label = "check"   time = "26w" ];
 
 	"one flat" -> "no spare"		[ label = "change"  time = "30m" ];
 
-	"no spare" -> "two flats"		[ label = "flat"    time = "400d" ];
+	"no spare" -> "two flats"		[ label = "flat" ];
 	"no spare" -> OK		    	[ label = "repair"  time = "2d" ];
 
-	"two flats" -> OK		    	[ label = "tow"     time = "2h" ];
+	"two flats" -> OK		    	[ label = "tow" ];
 }

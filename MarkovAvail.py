@@ -2,9 +2,9 @@
 #
 
 """
-    This utility accepts Markov Availability models (in the dot
-    input language for describing directed graphs), solves them,
-    and sends the (ascii text) solutions to stdiout.
+    This class accepts Markov Availability models (in the dot
+    input language for describing directed graphs), and solves
+    them:
 """
 
 # TODO
@@ -56,7 +56,17 @@ def timeconvert(string, unit=60*60):
 
 
 class MarkovAvail:
-    """ Markov Availability model based on dot directed graph """
+    """
+        Markov Availability model based on dot directed graph
+
+            .numstates ...      number of states in the model
+            .stateNums[] ...    state name to number map
+            .stateNames[#] ...  state number to name map
+            .stateType[#] ...   bucket names for each state
+            .rates[i][j] ...    transitions i->j (in FITs)
+            .occupancy[#] ...   fractional occupancy of states
+
+    """
 
     def addState(self, name, stateClass):
         """ add a state to our table if it is not already there """
@@ -77,7 +87,7 @@ class MarkovAvail:
             print("    %s -> %s [%s=%d]" % (source, dest, label, value))
         self.rates[self.stateNums[source]][self.stateNums[dest]] = value
 
-    def __init__(self, graph, debug=0):
+    def __init__(self, graph, values, debug=0):
         """ process graph to extract states and transition rates """
 
         # initialize all the class attributes
@@ -124,20 +134,44 @@ class MarkovAvail:
             # get the time/rate and turn it into a FIT
             v = 0
             r = e.get('rate')
+            f = e.get('fits')
             t = e.get('time')
-            if r is not None:           # already FITs
+            if f is not None:           # already FITs
+                x = unquote(f)
+                if not x.isdigit():
+                    print("ERROR - FIT rate (%s) must be an integer" % (x))
+                else:
+                    v = int(x)
+                    self.addTransition(s, d, l, v)
+            elif r is not None:         # rate is same as FITs
                 x = unquote(r)
                 if not x.isdigit():
-                    print("FIX ... add dictionary lookup(%s)" % (x))
-                v = int(x)
-            elif t is not None:
+                    print("ERROR - rate (%s) must be an integer" % (x))
+                else:
+                    v = int(x)
+                    self.addTransition(s, d, l, v)
+            elif t is not None:         # convert time to rate
                 x = unquote(t)
                 if not x.isdigit() and not x[0:-1].isdigit():
-                    print("FIX ... add dictionary lookup(%s)" % (x))
-                v = 1E9 / timeconvert(x, 60*60)
+                    print("ERROR - FIT rate (%s) must be <integer><unit>" %
+                          (x))
+                else:
+                    v = 1E9 / timeconvert(x, 60*60)
+                    self.addTransition(s, d, l, v)
+            elif l in values:
+                x = values[l]
+                if x.isdigit():             # a straight number (rate)
+                    v = int(x)
+                    self.addTransition(s, d, l, v)
+                elif x[0:-1].isdigit():     # a time with a unit suffix
+                    v = 1E9 / timeconvert(x, 60*60)
+                    self.addTransition(s, d, l, v)
+                else:
+                    print("ERROR - bad value in dictionary: %s->%s (%s=%s)" %
+                          (s, d, l, x))
             else:
-                print("FIX ... add dictionary lookup(%s)" % (l))
-            self.addTransition(s, d, l, v)
+                print("ERROR - no transition rate for %s: %s->%s" %
+                      (l, s, d))
 
     def solve(self):
         """
@@ -186,9 +220,6 @@ def processFile(filename, dictionary, debug):
     """
         parse a file, solve the model, print out the results
     """
-    if dictionary is not None:
-        print("ERROR: dictonaries(%s) not yet supported" % (dictionary))
-
     g = pydot.graph_from_dot_file(filename)
     # FIX ... can I get pydot to parse stdin?
 
@@ -196,8 +227,27 @@ def processFile(filename, dictionary, debug):
         n = g.get_name()
         print("Markov Model: %s" % (n))
 
+    # assemble an external dictionary for unspecified values
+    valueDict = {}
+    if dictionary is not None:
+        if debug > 1:
+            print("Using value dictionary: %s" % (dictionary))
+        with open(dictionary) as f:
+            for line in f:
+                # skip comment lines
+                if line.startswith('#') or line.startswith('/'):
+                    continue
+                # a value line needs at least two fields
+                parts = line.split()
+                if len(parts) >= 2:
+                    key = parts[0]
+                    value = parts[1]
+                    valueDict[key] = value
+                    if debug > 1:
+                        print("    dictionary[%s]:\t%s" % (key, value))
+
     # process the model
-    m = MarkovAvail(g, debug)
+    m = MarkovAvail(g, valueDict, debug)
     if debug > 1:
         print("\nFIT Rates:")
         for i in range(m.numstates):
@@ -270,7 +320,7 @@ if __name__ == '__main__':
     (opts, files) = parser.parse_args()
 
     if len(files) < 1:
-        print("ERROR: no file name specified")
+        print("ERROR: no input file specified")
     elif opts.dictionary is not None:
         processFile(files[0], opts.dictionary, opts.debug)
     elif len(files) > 1:

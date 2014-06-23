@@ -1,6 +1,6 @@
 MarkovAvailability
 =================
-Tools for building and solving Markov Availability models
+Tools for building and solving steady state Markov Availability models
 
 In the past I have used white-boards to develop Markov Availability models
 and spreadhsheets to solve them ... and I did not like interacting with the
@@ -32,6 +32,7 @@ I defined additional properties for dot graphs:
 			many such buckets, and the only effect they have is in
 			the summary report.
 
+	edge.fits ...	a transition rate in FITs
 	edge.rate ...	a transition rate in FITs
 
 	edge.time ...	a frequency/processing interval, followed by a letter
@@ -44,8 +45,9 @@ generates the associated set of simultaneous linear equations, solves them,
 and extracts the state occupancies.
 
 The module also includes a main routine, to process a file and generate a report.
-It also serves as a code sample.
+The main also serves as an example of how the MarkovAvail class can be used by a program.
 
 Files:
 	MarkovAvail.py	the Markov Availability model solution class
 	Tires		a sample availability model
+	Tires.dict	an external data dictionary for transition rates
