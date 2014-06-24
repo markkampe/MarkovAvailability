@@ -28,7 +28,7 @@ def unquote(string):
         return string
 
 
-def timeconvert(string, unit=60*60):
+def timeconvert(string, unit=60 * 60):
     """
         utility function to take a time expression (with a unit suffix)
         and convert it to the specified unit (specified in seconds)
@@ -155,7 +155,7 @@ class MarkovAvail:
                     print("ERROR - FIT rate (%s) must be <integer><unit>" %
                           (x))
                 else:
-                    v = 1E9 / timeconvert(x, 60*60)
+                    v = 1E9 / timeconvert(x, 60 * 60)
                     self.addTransition(s, d, l, v)
             elif values is not None and l in values:   # value in dictionary
                 x = values[l]
@@ -163,7 +163,7 @@ class MarkovAvail:
                     v = int(x)
                     self.addTransition(s, d, l, v)
                 elif x[0:-1].isdigit():     # a time with a unit suffix
-                    v = 1E9 / timeconvert(x, 60*60)
+                    v = 1E9 / timeconvert(x, 60 * 60)
                     self.addTransition(s, d, l, v)
                 else:
                     print("ERROR - bad value in dictionary: %s->%s (%s=%s)" %
@@ -311,8 +311,9 @@ if __name__ == '__main__':
 
     # process the command line arguments
     from optparse import OptionParser
-    parser = OptionParser(usage=
-                          "usage: %prog [options] input_file [dictionary]")
+
+    umsg = "usage: %prog [options] input_file [dictionary]"
+    parser = OptionParser(usage=umsg)
     parser.add_option("-d", "--debug", type="int", dest="debug",
                       default="0")
     parser.add_option("-D", "--dictionary", type="string",
