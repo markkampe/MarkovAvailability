@@ -49,7 +49,7 @@ and extracts the state occupancies.
 The module also includes a main routine, to process a file and generate a report.
 The main also serves as an example of how the MarkovAvail class can be used by a program.
 
-Files:
-	MarkovAvail.py	the Markov Availability model solution class
-	Tires		a sample availability model
-	Tires.dict	an external data dictionary for transition rates
+	Files:
+		MarkovAvail.py	the Markov Availability model solution class
+		Tires		a sample availability model
+		Tires.dict	an external data dictionary for transition rates
