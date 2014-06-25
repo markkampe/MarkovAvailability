@@ -6,18 +6,17 @@ In the past I have used white-boards to develop Markov Availability models
 and spreadhsheets to solve them ... and I did not like interacting with the
 models.  I decided I wanted a tool chain with:
 
-   an intuitive and easily edited input format
-	where nodes could be decorated with availability state info
-	where edges could be decorated with transition rate info
+	an intuitive and easily edited input format
+		where nodes could be decorated with availability state info
+		where edges could be decorated with transition rate info
 
-   the ability to 
-   	generate and solve equations for state occupancy
+	the ability to generate and solve equations for state occupancy
 
-   producing output including
-   	suitable-for-publication state model graphics
-	the occupancy of each model state
-	the occupancy of each class of states
-	statistical breakdown of the tributaries to each state
+	producing output including
+		suitable-for-publication state model graphics
+		the occupancy of each model state
+		the occupancy of each class of states
+		statistical breakdown of the tributaries to each state
 
 I decided to start with the representation.  And a little searching turned up the 
 graphviz dot language for representing directed graphs.  The dot input language
