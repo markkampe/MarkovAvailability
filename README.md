@@ -5,11 +5,14 @@ Tools for building and solving steady state Markov Availability models
 In the past I have used white-boards to develop Markov Availability models
 and spreadhsheets to solve them ... and I did not like interacting with the
 models.  I decided I wanted a tool chain with:
+
    an intuitive and easily edited input format
 	where nodes could be decorated with availability state info
 	where edges could be decorated with transition rate info
+
    the ability to 
    	generate and solve equations for state occupancy
+
    producing output including
    	suitable-for-publication state model graphics
 	the occupancy of each model state
