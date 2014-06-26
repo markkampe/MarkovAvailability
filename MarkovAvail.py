@@ -13,6 +13,7 @@
 #
 
 import pydot                # pydot file parser
+import operator             # list sorting
 from numpy import matrix    # matrix inversion
 
 
@@ -261,50 +262,61 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
     m.solve()
     print("\nState Occupancy:")
 
-    # create an occupancy-weighted copy of the transition rates
+    # extract the state and class occupancies
     weighted = m.rates
-    for i in range(m.numstates):
-        for j in range(m.numstates):
-            weighted[i][j] *= m.occupancy[i]
-
-    # FIX: sort in order of descending occupancy
-    # print the state occupancies
+    stateOccupancies = {}
     classOccupancies = {}
+    totalOccupancy = 0
     for i in range(m.numstates):
-        t = m.stateType[i]
-        n = m.stateNames[i]
         o = m.occupancy[i]
+        # create an occupancy weighted transition table
+        for j in range(m.numstates):
+            weighted[i][j] *= o
+        # record all non-trivial occupancies (by both state and class)
         if o > deminimus:
+            stateOccupancies[i] = o
+            totalOccupancy += o
+            t = m.stateType[i]
             if t in classOccupancies:
                 classOccupancies[t] += o
             else:
                 classOccupancies[t] = o
-            print("    %08.5f%%\t%s(%s)" % (o * 100, n, t))
 
-            # print the tributory transition rates
-            in_total = 0
-            for j in range(m.numstates):
-                in_total += weighted[j][i]
+    # sort the states and classes by descending occupancy
+    sortedStates = sorted(stateOccupancies.iteritems(),
+                           key=operator.itemgetter(1),
+                           reverse=True)
+    sortedClasses = sorted(classOccupancies.iteritems(),
+                           key=operator.itemgetter(1),
+                           reverse=True)
 
-            # FIX: sort in order of descending contribution
-            for j in range(m.numstates):
-                w = weighted[j][i]
-                p = 100 * w / in_total
+    # print out the individual state occupancies
+    for (k, o) in sortedStates:
+        n = m.stateNames[k]
+        t = m.stateType[k]
+        print("    %08.5f%%\t%s(%s)" % (o * 100, n, t))
+
+        # print out the tributary transition rates
+        total = 0
+        for (j, x) in sortedStates:
+            total += weighted[j][k]
+        if total > 0:
+            for (j, x) in sortedStates:
+                w = weighted[j][k]
+                p = 100 * w / total
                 if w >= 1:
                     print("           \t%05.2f%%  (%d)  from %s" %
                           (p, w, m.stateNames[j]))
+    print("    --------\t------")
+    print("    %8.5f%%\t%s" % (100 * totalOccupancy, "Total"))
 
-    # and print out the overall state type occupancy
-    print("\nAvailability:")
-    total = 0
-    # FIX: sort in order of descending occupancy
-    for t in classOccupancies:
-        print("    %08.5f%%\t%s" % (100 * classOccupancies[t], t))
-        total += classOccupancies[t]
+    # print out the overall state class occupancy
+    print("\nAvailability class occupancy:")
+    for (k, o) in sortedClasses:
+        print("    %08.5f%%\t%s" % (100 * o, k))
 
-    if debug > 0:
-        print("    --------\t------")
-        print("    %8.5f\t%s" % (100 * total, "Total"))
+    print("    --------\t------")
+    print("    %8.5f%%\t%s" % (100 * totalOccupancy, "Total"))
 
 
 #
