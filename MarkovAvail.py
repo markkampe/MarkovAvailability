@@ -8,7 +8,8 @@
 """
 
 # TODO
-#   can I get graph_from_dot_file (or a friend) to read stdin?
+#   add support for sorting output by occupancy
+#   add support for performance as well as availability
 #
 
 import pydot                # pydot file parser
@@ -215,9 +216,13 @@ class MarkovAvail:
             self.occupancy[s] = l[s][0]
 
 
-def processFile(filename, dictionary=None, debug=0):
+def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
     """
         parse a file, solve the model, print out the results
+            name of the "dot" graph file to process
+            name of the associated rate dictionary file
+            level of desired debugging
+            deminimums occupancy (below which we don't report)
     """
     g = pydot.graph_from_dot_file(filename)
     # FIX ... can I get pydot to parse stdin?
@@ -262,35 +267,39 @@ def processFile(filename, dictionary=None, debug=0):
         for j in range(m.numstates):
             weighted[i][j] *= m.occupancy[i]
 
+    # FIX: sort in order of descending occupancy
     # print the state occupancies
     classOccupancies = {}
     for i in range(m.numstates):
         t = m.stateType[i]
         n = m.stateNames[i]
         o = m.occupancy[i]
-        if t in classOccupancies:
-            classOccupancies[t] += o
-        else:
-            classOccupancies[t] = o
-        print("    %07.4f%%\t%s(%s)" % (o * 100, n, t))
+        if o > deminimus:
+            if t in classOccupancies:
+                classOccupancies[t] += o
+            else:
+                classOccupancies[t] = o
+            print("    %08.5f%%\t%s(%s)" % (o * 100, n, t))
 
-        # print the tributory transition rates
-        in_total = 0
-        for j in range(m.numstates):
-            in_total += weighted[j][i]
+            # print the tributory transition rates
+            in_total = 0
+            for j in range(m.numstates):
+                in_total += weighted[j][i]
 
-        for j in range(m.numstates):
-            w = weighted[j][i]
-            p = 100 * w / in_total
-            if w > 0:
-                print("           \t%05.2f%%  (%d)  from %s" %
-                      (p, w, m.stateNames[j]))
+            # FIX: sort in order of descending contribution
+            for j in range(m.numstates):
+                w = weighted[j][i]
+                p = 100 * w / in_total
+                if w >= 1:
+                    print("           \t%05.2f%%  (%d)  from %s" %
+                          (p, w, m.stateNames[j]))
 
     # and print out the overall state type occupancy
     print("\nAvailability:")
     total = 0
+    # FIX: sort in order of descending occupancy
     for t in classOccupancies:
-        print("    %07.4f%%\t%s" % (100 * classOccupancies[t], t))
+        print("    %08.5f%%\t%s" % (100 * classOccupancies[t], t))
         total += classOccupancies[t]
 
     if debug > 0:
