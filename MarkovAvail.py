@@ -7,10 +7,6 @@
     them:
 """
 
-# TODO
-#   add support for sorting output by occupancy
-#   add support for performance as well as availability
-#
 
 import pydot                # pydot file parser
 import operator             # list sorting
@@ -64,22 +60,24 @@ class MarkovAvail:
             .stateNums[] ...    state name to number map
             .stateNames[#] ...  state number to name map
             .stateType[#] ...   bucket names for each state
+            .statePerf[#] ...   the stated performance level for this state
             .rates[i][j] ...    transitions i->j (in FITs)
             .occupancy[#] ...   fractional occupancy of states
 
     """
 
-    def addState(self, name, stateClass):
+    def addState(self, name, stateClass=None, statePerf=0):
         """ add a state to our table if it is not already there """
 
         # if it is already in the table, we are done
         if not name in self.stateNums:
             if self.debug > 0:
-                print("    state[%d] = %s(%s)" %
-                      (self.numstates, name, stateClass))
+                print("    state[%d] = %s(%s,%f)" %
+                      (self.numstates, name, stateClass, statePerf))
             self.stateNums[name] = self.numstates
             self.stateNames[self.numstates] = name
             self.stateType[self.numstates] = stateClass
+            self.statePerf[self.numstates] = statePerf
             self.numstates += 1
 
     def addTransition(self, source, dest, label, value):
@@ -96,6 +94,7 @@ class MarkovAvail:
         self.stateNames = {}
         self.stateType = {}
         self.stateNums = {}
+        self.statePerf = {}
         self.debug = debug
 
         # get the node and edge sets
@@ -108,9 +107,11 @@ class MarkovAvail:
         for n in nodes:
             name = n.get_name()
             if name is not 'node':
-                c = n.get('state')
+                c = n.get('state')          # see if this node has a state
                 t = None if c is None else unquote(c)
-                self.addState(unquote(name), t)
+                c = n.get('performance')    # see if this node has a perf
+                p = 0 if c is None else float(unquote(c))
+                self.addState(unquote(name), t, p)
 
         # look for states we didn't find in the nodes
         for e in edges:
@@ -266,6 +267,7 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
     weighted = m.rates
     stateOccupancies = {}
     classOccupancies = {}
+    classPerf = {}
     totalOccupancy = 0
     for i in range(m.numstates):
         o = m.occupancy[i]
@@ -281,6 +283,10 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
                 classOccupancies[t] += o
             else:
                 classOccupancies[t] = o
+            if t in classPerf:
+                classPerf[t] += o * m.statePerf[i]
+            else:
+                classPerf[t] = o * m.statePerf[i]
 
     # sort the states and classes by descending occupancy
     sortedStates = sorted(stateOccupancies.iteritems(),
@@ -294,9 +300,10 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
     for (k, o) in sortedStates:
         n = m.stateNames[k]
         t = m.stateType[k]
-        print("    %08.5f%%\t%s(%s)" % (o * 100, n, t))
+        p = m.statePerf[k]
+        print("  %9.5f%%\t%s(%s), perf=%05.2f%%" % (o * 100, n, t, p * 100))
 
-        # print out the tributary transition rates
+        # tributary transition rates
         total = 0
         for (j, x) in sortedStates:
             total += weighted[j][k]
@@ -308,15 +315,21 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
                     print("           \t%05.2f%%  (%d)  from %s" %
                           (p, w, m.stateNames[j]))
     print("    --------\t------")
-    print("    %8.5f%%\t%s" % (100 * totalOccupancy, "Total"))
+    print("  %9.5f%%\t%s" % (100 * totalOccupancy, "Total"))
 
-    # print out the overall state class occupancy
-    print("\nAvailability class occupancy:")
+    # overall state class occupancy and weighted performance
+    print
+    print("    occupancy\tperformance\tavailability")
+    print("    ---------\t-----------\t-----")
+    totPerf = 0.0
     for (k, o) in sortedClasses:
-        print("    %08.5f%%\t%s" % (100 * o, k))
+        p = classPerf[k] / o
+        print("   %9.5f%%\t %9.5f%%\t%s" % (100 * o, 100 * p, k))
+        totPerf += o * p
 
-    print("    --------\t------")
-    print("    %8.5f%%\t%s" % (100 * totalOccupancy, "Total"))
+    print("    ---------\t-----------\t-----")
+    print("   %9.5f%%\t %9.5f%%\t%s" %
+          (100 * totalOccupancy, 100 * totPerf, "Total"))
 
 
 #

@@ -19,6 +19,7 @@
 #
 #   additional node properties for Markov models:
 #       state = <string>        avaialibility class (e.g. up/down)
+#	performance = <string>	fraction of normal performance
 #
 #   additional edge properties for Markov models:
 #       fits = <number>         FIT rate
@@ -45,11 +46,11 @@ digraph Tires {
 	// node definitions
 	node [ fixedsize = true, height = 1.25 ];
 	node [ shape = doublecircle color = green ];
-		OK			        [ state = "up" ];
+		OK			        [ state = "up" performance="1.0" ];
 
 	node [ shape = circle color = orange ];
-		"bad spare"		        [ state = "compromised" ];
-		"no spare"		        [ state = "compromised" ];
+		"bad spare"		        [ state = "compromised" performance="1.0" ];
+		"no spare"		        [ state = "compromised" performance="0.5"];
 		
 	node [ shape = doublecircle color = red ];
 		"one flat"		        [ state = "down" ];
