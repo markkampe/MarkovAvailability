@@ -18,8 +18,16 @@ def unquote(string):
         utility function to remove the quotes around a quoted string
 
         Necessary because the dot input language allows identifiers
-        to be qoted, and the pydot parser does not remove them.
+        to be qoted, and the pydot parser does not remove the quotes.
+
+        Args:
+            string (string): the string to be unquoted
+
+        Returns:
+            string: the string w/o surrounding quotes (if any)
     """
+    if string is None:
+        return None
     if string.startswith('"') and string.endswith('"'):
         return string[1:-1]
     else:
@@ -28,8 +36,14 @@ def unquote(string):
 
 def timeconvert(string, unit=60 * 60):
     """
-        utility function to take a time expression (with a unit suffix)
-        and convert it to the specified unit (specified in seconds)
+        utility function convert a time expression to a specified unit
+
+        Args:
+            string (string): the expression to be converted
+            unit (int): unit (in seconds) of desired result
+
+        Returns:
+            int: number of time units specified by input string
     """
     if string.isdigit():        # default units
         v = int(string) * unit
@@ -56,45 +70,97 @@ class MarkovAvail:
     """
         Markov Availability model based on dot directed graph
 
+        Attributes (basic information about the states):
             .numstates ...      number of states in the model
-            .stateNums[] ...    state name to number map
+            .stateNums[name] .. state name to number map
             .stateNames[#] ...  state number to name map
+
+       Attributes (information parsed from the input file):
             .stateType[#] ...   bucket names for each state
             .statePerf[#] ...   the stated performance level for this state
+            .stateCap[#] ...    the stated capacity level for this state
             .rates[i][j] ...    transitions i->j (in FITs)
-            .occupancy[#] ...   fractional occupancy of states
+
+       Attributes (rates and solutions):
+            .occupancy[#] ...   fractional occupancy of each state
+            .weighted[i][j] ..  occupancy weighted transition rates
+                                (rate times source state occupancy)
+
+        Note that the order of the entries in these arrays is arbitrary
+        (assigned by the pydot parser).  If you want the results sorted
+        by class, by name, or by occupancy, you must do that yourself.
 
     """
 
-    def addState(self, name, stateClass=None, statePerf=0):
-        """ add a state to our table if it is not already there """
+    def addState(self, name, stateClass=None, statePerf=None, stateCap=None):
+        """ add a state to our table (if it is not already there)
+
+            Args:
+                name (string): name of this state
+                stateClass (string):    availability class
+                statePerf(string):      performance of this state
+                stateCap(string):       capacity of this state
+
+                All arguments other than the name are optional, and are
+                not used in this class.  We merely parse them and make
+                them available to the client (for reporting purposes).
+        """
 
         # if it is already in the table, we are done
         if not name in self.stateNums:
-            if self.debug > 0:
-                print("    state[%d] = %s(%s,%f)" %
-                      (self.numstates, name, stateClass, statePerf))
-            self.stateNums[name] = self.numstates
-            self.stateNames[self.numstates] = name
-            self.stateType[self.numstates] = stateClass
-            self.statePerf[self.numstates] = statePerf
+            i = self.numstates
+            self.stateNums[name] = i
+            self.stateNames[i] = name
             self.numstates += 1
 
+            if self.debug > 0:
+                print("    state[%d] = %s(%s,%s,%s)" %
+                      (i, name, stateClass, statePerf, stateCap))
+
+            # update the state annotations we collect for the client
+            if stateClass is not None:
+                self.stateType[i] = stateClass
+            if statePerf is not None:
+                self.statePerf[i] = statePerf
+            if stateCap is not None:
+                self.stateCap[i] = statPerf
+
     def addTransition(self, source, dest, label, value):
-        """ add a transition to our table """
+        """ add a transition to our table
+
+            Args:
+                source (int): initial state for this transition
+                dest (int): target state for this transition
+                label (string): name associated with this transition
+                value (int): rate (in FITs) asssociated with this transition
+        """
         if self.debug > 0:
             print("    %s -> %s [%s=%d]" % (source, dest, label, value))
         self.rates[self.stateNums[source]][self.stateNums[dest]] = value
 
     def __init__(self, graph, values=None, debug=0):
-        """ process graph to extract states and transition rates """
+        """ process graph to extract states and transition rates
+
+            Args:
+                graph (pydot graph): the Markov graph to be solved
+                values (dictionary): transition rate value lookup
+                debug (int): desired level of debug output
+                    0:  none
+                    1:  basic parameters
+                    2:  painful details
+        """
+
+        if debug > 0:
+            n = graph.get_name()
+            print("\nMarkov Model: %s" % (n))
 
         # initialize all the class attributes
         self.numstates = 0
-        self.stateNames = {}
-        self.stateType = {}
-        self.stateNums = {}
-        self.statePerf = {}
+        self.stateNames = {}        # number to name map
+        self.stateNums = {}         # name to number map
+        self.stateType = {}         # parsed for use by client
+        self.statePerf = {}         # parsed for use by client
+        self.stateCap = {}          # parsed for use by client
         self.debug = debug
 
         # get the node and edge sets
@@ -105,23 +171,20 @@ class MarkovAvail:
         if self.debug > 0:
             print("\nStates:")
         for n in nodes:
-            name = n.get_name()
+            name = unquote(n.get_name())
             if name is not 'node':
-                c = n.get('state')          # see if this node has a state
-                t = None if c is None else unquote(c)
-                c = n.get('performance')    # see if this node has a perf
-                p = 0 if c is None else float(unquote(c))
-                self.addState(unquote(name), t, p)
+                # capture per-state attributes the client might want
+                t = unquote(n.get('state'))
+                p = unquote(n.get('performance'))
+                c = unquote(n.get('capacity'))
+                self.addState(name, t, p, c)
 
-        # look for states we didn't find in the nodes
+        # look for undeclared states implied by the transitions
         for e in edges:
-            # make sure we know about the states
-            s = unquote(e.get_source())
-            self.addState(s, None)
-            d = unquote(e.get_destination())
-            self.addState(d, None)
+            self.addState(unquote(e.get_source()))
+            self.addState(unquote(e.get_destination()))
 
-        # create the transition rate matrix
+        # now that we know how many states, create transition rate matrix
         self.rates = [[0 for x in range(self.numstates)]
                       for x in range(self.numstates)]
 
@@ -133,38 +196,24 @@ class MarkovAvail:
             d = unquote(e.get_destination())
             l = unquote(e.get('label'))
 
-            # get the time/rate and turn it into a FIT
-            v = 0
-            r = e.get('rate')
-            f = e.get('fits')
-            t = e.get('time')
-            if f is not None:           # already FITs
-                x = unquote(f)
-                if not x.isdigit():
-                    print("ERROR - FIT rate (%s) must be an integer" % (x))
+            # see if a rate has been specified
+            f = unquote(e.get('fits')) or unquote(e.get('rate'))
+            t = unquote(e.get('time'))
+            if f is not None:           # a numeric rate
+                if not f.isdigit():
+                    print("ERROR - rate (%s) must be an integer" % (f))
                 else:
-                    v = int(x)
-                    self.addTransition(s, d, l, v)
-            elif r is not None:         # rate is same as FITs
-                x = unquote(r)
-                if not x.isdigit():
-                    print("ERROR - rate (%s) must be an integer" % (x))
+                    self.addTransition(s, d, l, int(f))
+            elif t is not None:         # a numeric time
+                if not t.isdigit() and not t[0:-1].isdigit():
+                    print("ERROR - time (%s) must be <#><unit>" % (t))
                 else:
-                    v = int(x)
-                    self.addTransition(s, d, l, v)
-            elif t is not None:         # convert time to rate
-                x = unquote(t)
-                if not x.isdigit() and not x[0:-1].isdigit():
-                    print("ERROR - FIT rate (%s) must be <integer><unit>" %
-                          (x))
-                else:
-                    v = 1E9 / timeconvert(x, 60 * 60)
+                    v = 1E9 / timeconvert(t, 60 * 60)
                     self.addTransition(s, d, l, v)
             elif values is not None and l in values:   # value in dictionary
                 x = values[l]
                 if x.isdigit():             # a straight number (rate)
-                    v = int(x)
-                    self.addTransition(s, d, l, v)
+                    self.addTransition(s, d, l, int(x))
                 elif x[0:-1].isdigit():     # a time with a unit suffix
                     v = 1E9 / timeconvert(x, 60 * 60)
                     self.addTransition(s, d, l, v)
@@ -172,8 +221,12 @@ class MarkovAvail:
                     print("ERROR - bad value in dictionary: %s->%s (%s=%s)" %
                           (s, d, l, x))
             else:
-                print("ERROR - no transition rate for %s: %s->%s" %
-                      (l, s, d))
+                print("ERROR - no transition rate for %s: %s->%s" % (l, s, d))
+
+        if self.debug > 1:
+            print("\nDEBUG: Raw Transition Rates:")
+            for i in range(self.numstates):
+                print self.rates[i]
 
     def solve(self):
         """
@@ -185,13 +238,14 @@ class MarkovAvail:
                   they are not truly independent (the graph being
                   closed)
         """
+        # start out with all zeroes
         eqns = [[0 for x in range(self.numstates)]
                 for x in range(self.numstates)]
 
         # first equation: all terms sum to one
         eqns[0] = [1 for x in range(self.numstates)]
 
-        # sum of inputs - outputs = 0
+        # remaining equations: sum of inputs - outputs = 0
         for s in range(1, self.numstates):
             outputs = self.rates[s]
             for d in range(0, self.numstates):
@@ -200,40 +254,58 @@ class MarkovAvail:
                 else:
                     eqns[s][d] = self.rates[d][s]
 
-        if self.debug > 1:
-            print("\nEquations:")
-            print eqns
-
         # now solve the system of equations
         m = matrix(eqns)
-        i = m.I
+        inv = m.I
         if self.debug > 1:
-            print("\nInverse:")
-            print i
+            print("\nDEBUG: Equations:")
+            for i in range(self.numstates):
+                print eqns[i]
+            print("\nDEBUG: Inverse:")
+            for i in range(self.numstates):
+                print inv[i]
 
-        # copy out the solutions
+        # copy the Matrix solutions back into lists for the client
         self.occupancy = [0 for x in range(self.numstates)]
-        l = i.tolist()
+        l = inv.tolist()
         for s in range(self.numstates):
             self.occupancy[s] = l[s][0]
 
+        # compute occupancy weighted transition rates
+        self.weighted = self.rates
+        for s in range(self.numstates):
+            o = self.occupancy[s]
+            for j in range(self.numstates):
+                self.weighted[s][j] *= o
 
-def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
+
+def processFile(filename, dictionary=None, debug=0):
     """
         parse a file, solve the model, print out the results
+
+        This is a useful function in its own right, used to implement a
+        Markov Model solving CLI.  But it is also an example of how to
+        use the MarkovAvail class and make sense of the results.
+
+        Args:
+            filename (string): name of dot format input file
+            dictionary (string): name of transition rates file
+            debug (int): level of desired debug output
+                0:  none
+                1:  parsed and interpreted parameters
+                2:  painful for code (not model) debugging
             name of the "dot" graph file to process
             name of the associated rate dictionary file
             level of desired debugging
-            deminimums occupancy (below which we don't report)
+
+        Returns:
+            MarkovAvail: parameters and solutions
+            list: sorted (state #, occupancy) tupples
     """
+    # process the input file
     g = pydot.graph_from_dot_file(filename)
-    # FIX ... can I get pydot to parse stdin?
 
-    if debug > 1:
-        n = g.get_name()
-        print("Markov Model: %s" % (n))
-
-    # assemble an external dictionary for unspecified values
+    # process the dictionary
     valueDict = {}
     if dictionary is not None:
         if debug > 1:
@@ -254,98 +326,46 @@ def processFile(filename, dictionary=None, debug=0, deminimus=0.0000001):
 
     # process the model
     m = MarkovAvail(g, valueDict, debug)
-    if debug > 1:
-        print("\nFIT Rates:")
-        for i in range(m.numstates):
-            print m.rates[i]
 
     # solve the model and print the results
     m.solve()
-    print("\nState Occupancy:")
 
-    # extract the state and class occupancies
-    weighted = m.rates
+    # create a list of states, sorted by occupancy
     stateOccupancies = {}
-    classOccupancies = {}
-    classPerf = {}
-    totalOccupancy = 0
     for i in range(m.numstates):
         o = m.occupancy[i]
-        # create an occupancy weighted transition table
-        for j in range(m.numstates):
-            weighted[i][j] *= o
-        # record all non-trivial occupancies (by both state and class)
-        if o > deminimus:
-            stateOccupancies[i] = o
-            totalOccupancy += o
-            t = m.stateType[i]
-            if t in classOccupancies:
-                classOccupancies[t] += o
-            else:
-                classOccupancies[t] = o
-            if t in classPerf:
-                classPerf[t] += o * m.statePerf[i]
-            else:
-                classPerf[t] = o * m.statePerf[i]
-
-    # sort the states and classes by descending occupancy
+        stateOccupancies[i] = o
     sortedStates = sorted(stateOccupancies.iteritems(),
-                           key=operator.itemgetter(1),
-                           reverse=True)
-    sortedClasses = sorted(classOccupancies.iteritems(),
-                           key=operator.itemgetter(1),
-                           reverse=True)
+                          key=operator.itemgetter(1),
+                          reverse=True)
 
-    # print out the individual state occupancies
-    for (k, o) in sortedStates:
-        n = m.stateNames[k]
-        t = m.stateType[k]
-        p = m.statePerf[k]
-        print("  %9.5f%%\t%s(%s), perf=%05.2f%%" % (o * 100, n, t, p * 100))
-
-        # tributary transition rates
-        total = 0
-        for (j, x) in sortedStates:
-            total += weighted[j][k]
-        if total > 0:
-            for (j, x) in sortedStates:
-                w = weighted[j][k]
-                p = 100 * w / total
-                if w >= 1:
-                    print("           \t%05.2f%%  (%d)  from %s" %
-                          (p, w, m.stateNames[j]))
-    print("    --------\t------")
-    print("  %9.5f%%\t%s" % (100 * totalOccupancy, "Total"))
-
-    # overall state class occupancy and weighted performance
-    print
-    print("    occupancy\tperformance\tavailability")
-    print("    ---------\t-----------\t-----")
-    totPerf = 0.0
-    for (k, o) in sortedClasses:
-        p = classPerf[k] / o
-        print("   %9.5f%%\t %9.5f%%\t%s" % (100 * o, 100 * p, k))
-        totPerf += o * p
-
-    print("    ---------\t-----------\t-----")
-    print("   %9.5f%%\t %9.5f%%\t%s" %
-          (100 * totalOccupancy, 100 * totPerf, "Total"))
+    # return the solution and the sorted state/occupancy list
+    return (m, sortedStates)
 
 
 #
-# this main routine serves three purposes:
+# this main routine serves two purposes:
 #   a unit test case
 #   sample code using the MarkovAvail class
-#   a useful program to produce the most likely desired output
+#
+# note:
+#   The stateClass, statePerf, and stateCap lists are merely strings.
+#   The MarkovAvail class associates no meaning to them.  Only clients
+#   (like this) ascribe meaning to them
+#
+#   most of the complexity in this routine is:
+#       constructing attractive output
+#       interpreting state{Class,Perf,Cap} attributes
+#       aggregating per-state information into per-class statistics
 #
 if __name__ == '__main__':
     """ CLI entry point:
         process command line arguments, and process the selected files
     """
 
-    # process the command line arguments
     from optparse import OptionParser
 
+    # process the command line arguments
     umsg = "usage: %prog [options] input_file [dictionary]"
     parser = OptionParser(usage=umsg)
     parser.add_option("-d", "--debug", type="int", dest="debug",
@@ -354,11 +374,129 @@ if __name__ == '__main__':
                       dest="dictionary")
     (opts, files) = parser.parse_args()
 
+    # process the model (with the dictionary)
     if len(files) < 1:
         print("ERROR: no input file specified")
-    elif opts.dictionary is not None:
-        processFile(files[0], opts.dictionary, opts.debug)
-    elif len(files) > 1:
-        processFile(files[0], files[1], opts.debug)
-    else:
-        processFile(files[0], None, opts.debug)
+    dict = files[1] if len(files) > 1 else opts.dictionary
+    (m, states) = processFile(files[0], dict, opts.debug)
+
+    #
+    # this code looks at the data and a few chosen parameters and
+    # dynamically constructs attractive output formats
+    #
+    num_width = 10                                  # stardard width unit
+    format_s = "%" + "%d" % (num_width) + "s"       # string of standard with
+    line = (num_width-1) * "-"                      # stardard with separator
+
+    # individual numbers will be rendered with these formats
+    decimals = 5
+    format_o = "%" + "%d.%d" % (num_width-1, decimals) + "f%%"  # occupancy
+    format_p = "%" + "%d.%d" % (num_width-1, 1) + "f%%"         # performance
+    format_c = "%" + "%d.%d" % (num_width-1, 1) + "f%%"         # capacity
+
+    # state and class names are sized based on the model
+    name_width = num_width                                      # minimum
+    for i in range(m.numstates):
+        if i in m.stateNames and len(m.stateNames[i]) > name_width:
+            name_width = len(m.stateNames[i])
+        if i in m.stateType and len(m.stateType[i]) > name_width:
+            name_width = len(m.stateType[i])
+    format_n = "%%-%ds" % (name_width)
+
+    # all of this culminates in a single master output format (for strings)
+    #   all fields will be converted to strings before they are printed
+    #   this allows one format to be used for headings, separators, data
+    #   this allows one format to be used for all types of data
+    #   this allows n/a data to be replaced with blanks
+    lead = "    "                                               # all lines
+    fmt = lead + format_s + 2 * ("\t" + format_n) + 2 * ("\t" + format_s)
+
+    # initialize aggregate statistics
+    t_occ = 0           # total occupancy
+    t_perf = 0          # total occupancy-weighted performance
+    t_cap = 0           # total occupancy-weighted capacity
+    classes = {}        # per-class occupancy
+    perf = {}           # per-class occupancy weighted performance
+    cap = {}            # per-class occupancy weighted capacity
+
+    # print out the individual state occupancies
+    print("\nper state:")
+    print(fmt % ("occupancy", "state", "class", "perf", "capacity"))
+    print(fmt % (line, line, line, line, line))
+    for (i, occupancy) in states:
+        n = m.stateNames[i]
+        t = m.stateType[i]
+        t_occ += occupancy
+        po = format_o % (100 * occupancy)
+        pp = ""
+        pc = ""
+
+        # look at capacity and performance, accumulate per-class stats
+        if t is not None:
+            if t in classes:
+                classes[t] += occupancy
+            else:
+                classes[t] = occupancy
+        if i in m.statePerf:            # we treat these as fractions
+            p = float(m.statePerf[i])
+            t_perf += occupancy * p
+            if t is not None:
+                if t in perf:
+                    perf[t] += occupancy * p
+                else:
+                    perf[t] = occupancy * p
+            pp = format_p % (100 * p)
+        if i in m.stateCap:            # we treat these as fractions
+            c = float(m.stateCap[i])
+            t_cap += occupancy * c
+            if t is not None:
+                if t in cap:
+                    cap[t] += occupancy * c
+                else:
+                    cap[t] = occupancy * c
+            pc = format_c % (100 * c)
+
+        print(fmt % (po, n, t, pp, pc))
+
+    print(fmt % (line, line, "", "", ""))
+    po = format_o % (100 * t_occ)
+    pp = "" if t_perf == 0 else format_p % (100 * t_perf)
+    pc = "" if t_cap == 0 else format_c % (100 * t_cap)
+    print(fmt % (po, "total", "", pp, pc))
+
+    # get an occupancy sorted list of availability classes
+    sortedClasses = sorted(classes.iteritems(),
+                           key=operator.itemgetter(1),
+                           reverse=True)
+    t_occ = 0           # total occupancy
+    t_perf = 0          # total occupancy-weighted performance
+    t_cap = 0           # total occupancy-weighted capacity
+
+    # print out the per-class occupancies
+    print("\nper availability class:")
+    print(fmt % ("occupancy", "", "class", "perf", "capacity"))
+    print(fmt % (line, "", line, line, line))
+    for (n, occupancy) in sortedClasses:
+        if occupancy == 0:
+            continue
+        t_occ += occupancy
+        po = format_o % (100 * occupancy)
+        if n in perf:
+            p = perf[n]
+            t_perf += p
+            pp = format_p % (100 * p / occupancy)
+        else:
+            pp = ""
+        if n in cap:
+            c = cap[n]
+            t_cap += c
+            pc = format_c % (100 * c / occupancy)
+        else:
+            pc = ""
+        print(fmt % (po, "", n, pp, pc))
+
+    print(fmt % (line, "", line, "", ""))
+    po = format_o % (100 * t_occ)
+    pp = "" if t_perf == 0 else format_p % (100 * t_perf)
+    pc = "" if t_cap == 0 else format_c % (100 * t_cap)
+    print(fmt % (po, "", "total", pp, pc))

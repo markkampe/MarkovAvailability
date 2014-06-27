@@ -6,6 +6,12 @@
 #	because the basic models tend to be fairly stable, while the
 #	rates change with the time of day (different assumptions,
 #	new data, etc).
+#
+#	Note that the values must all be numerical rates (or times
+#	with units).  They cannot be expressions.  For complex models
+#	it might make sense to create a program that will generate
+#	these rates (based on variables and expressions).
+#
 
 //	comment lines can be preceded with sharps or slashes
 flat	400d		# how often we expect to get a flat
