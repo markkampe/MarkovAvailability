@@ -56,16 +56,23 @@ I also defined new properties for nodes:
 	but they are parsed and exposed to the client, to permit more
 	interesting reporting.
 
-The module also includes:
+MarkovAvail.py also includes
 
 	a processFile method that parses a dot graph and data dictionary,
 	uses them to instantiate and solve a MarkovAvail, and generates a
 	more convenient (sorted by occupancy) list of solutions.
 
+MarkovTest.py includes
+
 	a main method that processes parameters, invokes processFile, and
 	then uses the returned solution to generate a series of sample 
-	reports.  This main routine ...
+	reports.
 		
+	routines to generate per-state and per-class reports from the
+	solved Markov Model
+
+	this application uses node attributes as:
+
 		aggregates results into buckets based on node.state
 
 		treats node.performance as a fraction and reports on
@@ -82,5 +89,6 @@ The module also includes:
 
 Files:
 	MarkovAvail.py	the Markov Availability model solution class
+	MarkovTest.py	a sample application using the MarkovAvail class
 	Tires		a sample availability model
 	Tires.dict	an external data dictionary for transition rates
