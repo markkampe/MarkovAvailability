@@ -11,8 +11,9 @@ class OutputFormat:
         Fields:
             format_s (string)   %s format for data fields
             format_n (string)   %s format for name fields
-            format_h (string)   %d/f format for hi-res numbers
-            format_l (string)   %d/f format for low-res numbers
+            format_h (string)   %f format for hi-res numbers
+            format_l (string)   %f format for low-res numbers
+            format_d (string)   %d format for integers
             format (string)     %s format for an entire line
             line (string)       separator line of data width
 
@@ -42,6 +43,7 @@ class OutputFormat:
         # individual fields will be rendered one of these formats
         self.format_h = "%" + "%d.%d" % (data - 1, hires) + "f%%"
         self.format_l = "%" + "%d.%d" % (data - 1, lores) + "f%%"
+        self.format_d = "%" + "%d" % (data) + "d"
         self.format_n = "%%-%ds" % (name)
         self.format_s = "%" + "%d" % (data) + "s"
 
@@ -114,7 +116,6 @@ def class_report(markov, format):
         generate a class-bucket occupancy report
 
         Args:
-            states (list):          an ordered list of (state, occ) tupples
             markov (MarkovAvai):    the solution to be reported
             format (OutputFormat):  the chosen output formats
 
@@ -191,6 +192,48 @@ def class_report(markov, format):
     pc = "" if t_cap == 0 else format.format_l % (100 * t_cap)
     print(fmt % (po, "", "total", pp, pc))
 
+
+def tributary_report(states, markov, format):
+    """
+        generate a class-bucket occupancy report
+
+        Args:
+            states (list):          an ordered list of (state, occ) tupples
+            markov (MarkovAvai):    the solution to be reported
+            format (OutputFormat):  the chosen output formats
+
+        Note:
+            we treat performance and capacity as per-state fractions of nominal
+    """
+
+    fmt = format.format
+    line = format.line
+    print("\ntributary transitions:")
+    print(fmt % ("occupancy", "state", "source", "fraction", "FITs"))
+    print(fmt % (line, line, line, line, line))
+
+    # figure out the total number of transitions into each state
+    incoming = [0 for x in range(markov.numstates)]
+    for i in range(markov.numstates):
+        for j in range(markov.numstates):
+            incoming[j] += markov.rates[i][j]
+
+    # for each target state, list all tributary states
+    for (i, occupancy) in states:
+        n = markov.stateNames[i]
+        po = format.format_h % (100 * occupancy)
+        for (j, discard) in states:
+            fits = markov.weighted[j][i]
+            if fits == 0:
+                continue
+            src = markov.stateNames[j]
+            pf = format.format_l % (100 * fits / incoming[i])
+            pr = format.format_d % (fits)
+            print(fmt % (po, n, src, pf, pr))
+            po = ""
+            n = ""
+
+
 # this main routine serves two purposes:
 #   a unit test case
 #   sample code using the MarkovAvail class
@@ -231,4 +274,4 @@ if __name__ == '__main__':
     # generate a set of standardreports
     state_report(states, m, f)
     class_report(m, f)
-    #tributary_report(m, f)
+    tributary_report(states, m, f)
