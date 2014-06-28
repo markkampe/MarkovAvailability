@@ -15,7 +15,7 @@
 
 //	comment lines can be preceded with sharps or slashes
 flat	400d		# how often we expect to get a flat
-tow	2h		# how long it takes to get a tow and repair a flat
+tow      2h	        # how long it takes to get a tow and repair a flat
 leak	52083		# FIT rate for spares developing spontaneous leaks
 
 # test: make sure we ignore lines containing only a single token

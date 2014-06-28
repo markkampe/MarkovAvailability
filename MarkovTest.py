@@ -1,14 +1,36 @@
 #!/usr/bin/python
 #
-from MarkovAvail import processFile, MarkovAvail
-import operator
+#   sample program to process a Markov Availability model and print out a
+#   series of reports based on the solution.
+#
+#   usage: python MarkovTest.py [options] graph-file [dictionary]
+#
+#   options:
+#       --dictionary=file
+#       --debug=#
+#
+#   graph file format:  graphviz dot graph description + extra attributes
+#   dictionary file:    space/tab separated <name> <value>
+#   see examples (Tires, Tires.dict)
+#
+"""
+    classes:
+        OutputFormat ...    dynamic report line format generation
+
+    routines:
+        state_report ...        per-state occpancy report
+        class_report ...        per-class occupancy report
+        tributary_report ...    report how we get into each state
+
+    __main__ ...                CLI for processing Markov Models
+"""
 
 
 class OutputFormat:
     """
         A dynamically created output reporting format
 
-        Fields:
+        Attributes:
             format_s (string)   %s format for data fields
             format_n (string)   %s format for name fields
             format_h (string)   %f format for hi-res numbers
@@ -33,7 +55,7 @@ class OutputFormat:
             create an output format this report
 
             Args:
-                num (int):          desired width of a numeric field
+                data (int):         desired width of a data field
                 name (int):         desired width of a name field
                 hires (int):        decimal places for hi-res numbers
                 lores (int):        decimal places for low-res numbers
@@ -51,7 +73,10 @@ class OutputFormat:
 
         # the format for an entire output line (data, name, name, data, data)
         self.format = indent * " " + self.format_s + \
-                      2 * ("\t" + self.format_n) + 2 * ("\t" + self.format_s)
+            2 * ("\t" + self.format_n) + 2 * ("\t" + self.format_s)
+
+
+from MarkovAvail import processFile, MarkovAvail
 
 
 def state_report(states, markov, format):
@@ -109,6 +134,9 @@ def state_report(states, markov, format):
     pp = "" if t_perf == 0 else format.format_l % (100 * t_perf)
     pc = "" if t_cap == 0 else format.format_l % (100 * t_cap)
     print(fmt % (po, "total", "", pp, pc))
+
+
+import operator
 
 
 def class_report(markov, format):
@@ -239,8 +267,11 @@ def tributary_report(states, markov, format):
 #   sample code using the MarkovAvail class
 #
 if __name__ == '__main__':
-    """ CLI entry point:
-        process command line arguments, and process the selected files
+    """
+        CLI entry point
+            process command line arguments
+            process the input file(s)
+            generate a set of reports
     """
 
     from optparse import OptionParser
@@ -271,7 +302,7 @@ if __name__ == '__main__':
     # generate an appropriate output format
     f = OutputFormat(name=name_width)
 
-    # generate a set of standardreports
+    # generate a set of standard reports
     state_report(states, m, f)
     class_report(m, f)
     tributary_report(states, m, f)

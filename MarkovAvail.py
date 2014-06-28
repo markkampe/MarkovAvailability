@@ -1,7 +1,6 @@
 """
     This class accepts Markov Availability models (in the dot
-    input language for describing directed graphs), and solves
-    them:
+    form of pydot graphs) and solves them
 """
 
 
@@ -67,18 +66,18 @@ class MarkovAvail:
     """
         Markov Availability model based on dot directed graph
 
-        Attributes (basic information about the states):
+       Basic Attributes (parsed from the input file):
             .numstates ...      number of states in the model
             .stateNums[name] .. state name to number map
             .stateNames[#] ...  state number to name map
+            .rates[i][j] ...    transitions i->j (in FITs)
 
-       Attributes (information parsed from the input file):
+       Supplementary Attributes (parsed from the input file):
             .stateType[#] ...   bucket names for each state
             .statePerf[#] ...   the stated performance level for this state
             .stateCap[#] ...    the stated capacity level for this state
-            .rates[i][j] ...    transitions i->j (in FITs)
 
-       Attributes (rates and solutions):
+       Solution Attributes:
             .occupancy[#] ...   fractional occupancy of each state
             .weighted[i][j] ..  occupancy weighted transition rates
                                 (rate times source state occupancy)
@@ -160,13 +159,10 @@ class MarkovAvail:
         self.stateCap = {}          # parsed for use by client
         self.debug = debug
 
-        # get the node and edge sets
-        nodes = graph.get_node_list()
-        edges = graph.get_edge_list()
-
         # enumerate the nodes
         if self.debug > 0:
             print("\nStates:")
+        nodes = graph.get_node_list()
         for n in nodes:
             name = unquote(n.get_name())
             if name is not 'node':
@@ -177,6 +173,9 @@ class MarkovAvail:
                 self.addState(name, t, p, c)
 
         # look for undeclared states implied by the transitions
+        if self.debug > 0:
+            print("\nTransitions:")
+        edges = graph.get_edge_list()
         for e in edges:
             self.addState(unquote(e.get_source()))
             self.addState(unquote(e.get_destination()))
@@ -186,8 +185,6 @@ class MarkovAvail:
                       for x in range(self.numstates)]
 
         # fill in the transition rates
-        if self.debug > 0:
-            print("\nTransitions:")
         for e in edges:
             s = unquote(e.get_source())
             d = unquote(e.get_destination())
@@ -278,22 +275,19 @@ class MarkovAvail:
 
 def processFile(filename, dictionary=None, debug=0):
     """
-        parse a file, solve the model, print out the results
+        parse a file, solve the model, return the results
 
-        This is a useful function in its own right, used to implement a
-        Markov Model solving CLI.  But it is also an example of how to
-        use the MarkovAvail class and make sense of the results.
+        This is a useful function in its own right, as well as an example
+        of how to use the MarkovAvail class and make sense of the results.
 
         Args:
             filename (string): name of dot format input file
             dictionary (string): name of transition rates file
+                    space/tab separated <name,value> pairs, w/comments
             debug (int): level of desired debug output
                 0:  none
                 1:  parsed and interpreted parameters
                 2:  painful for code (not model) debugging
-            name of the "dot" graph file to process
-            name of the associated rate dictionary file
-            level of desired debugging
 
         Returns:
             MarkovAvail: parameters and solutions
@@ -327,7 +321,7 @@ def processFile(filename, dictionary=None, debug=0):
     # solve the model and print the results
     m.solve()
 
-    # create a list of states, sorted by occupancy
+    # create a list of states, sorted by decreasing occupancy
     stateOccupancies = {}
     for i in range(m.numstates):
         o = m.occupancy[i]
