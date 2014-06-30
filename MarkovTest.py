@@ -7,6 +7,8 @@
 #
 #   options:
 #       --dictionary=file
+#       --high=#            high precision decimal places
+#       --low=#             low precision decimal places
 #       --debug=#
 #
 #   graph file format:  graphviz dot graph description + extra attributes
@@ -33,8 +35,9 @@ class OutputFormat:
         Attributes:
             format_s (string)   %s format for data fields
             format_n (string)   %s format for name fields
-            format_h (string)   %f format for hi-res numbers
-            format_l (string)   %f format for low-res numbers
+            format_h (string)   %f format for hi-res percentages
+            format_l (string)   %f format for low-res percentages
+            format_f (string)   %f format for low-res numbers
             format_d (string)   %d format for integers
             format (string)     %s format for an entire line
             line (string)       separator line of data width
@@ -50,7 +53,7 @@ class OutputFormat:
 
     """
 
-    def __init__(self, data=10, name=10, hires=5, lores=1, indent=4):
+    def __init__(self, data=10, name=10, hires=6, lores=1, indent=4):
         """
             create an output format this report
 
@@ -62,9 +65,14 @@ class OutputFormat:
                 indent (int)        indent for all standad output
         """
 
+        # sanity check values
+        if data < hires + 5:        # 3 digits, dot, percent
+            data = hires + 5
+
         # individual fields will be rendered one of these formats
         self.format_h = "%" + "%d.%d" % (data - 1, hires) + "f%%"
         self.format_l = "%" + "%d.%d" % (data - 1, lores) + "f%%"
+        self.format_f = "%" + "%d.%d" % (data, lores) + "f"
         self.format_d = "%" + "%d" % (data) + "d"
         self.format_n = "%%-%ds" % (name)
         self.format_s = "%" + "%d" % (data) + "s"
@@ -237,7 +245,7 @@ def tributary_report(states, markov, format):
     fmt = format.format
     line = format.line
     print("\ntributary transitions:")
-    print(fmt % ("occupancy", "state", "source", "fraction", "FITs"))
+    print(fmt % ("occupancy", "state", "source", "contrib", "adj FITs"))
     print(fmt % (line, line, line, line, line))
 
     # figure out the total number of transitions into each state
@@ -248,15 +256,17 @@ def tributary_report(states, markov, format):
 
     # for each target state, list all tributary states
     for (i, occupancy) in states:
+        if incoming[i] == 0:       # state is never actually entered
+            continue
         n = markov.stateNames[i]
         po = format.format_h % (100 * occupancy)
         for (j, discard) in states:
             fits = markov.weighted[j][i]
-            if fits == 0:
+            if fits == 0:        # state never actually contributes
                 continue
             src = markov.stateNames[j]
-            pf = format.format_l % (100 * fits / incoming[i])
-            pr = format.format_d % (fits)
+            pf = format.format_h % (100 * fits / incoming[i])
+            pr = format.format_f % (fits)
             print(fmt % (po, n, src, pf, pr))
             po = ""
             n = ""
@@ -280,9 +290,17 @@ if __name__ == '__main__':
     umsg = "usage: %prog [options] input_file [dictionary]"
     parser = OptionParser(usage=umsg)
     parser.add_option("-d", "--debug", type="int", dest="debug",
-                      default="0")
-    parser.add_option("-D", "--dictionary", type="string",
-                      dest="dictionary")
+                      metavar="#", default="0",
+                      help="debug output level")
+    parser.add_option("-H", "--high", type="int", dest="high",
+                      metavar="#", default="6",
+                      help="decimal places for high precision numbers")
+    parser.add_option("-L", "--low", type="int", dest="low",
+                      metavar="#", default="1",
+                      help="decimal places for low precision numbers")
+    parser.add_option("-D", "--dictionary", type="string", dest="dictionary",
+                      metavar="FILE",
+                      help="dictionary file name")
     (opts, files) = parser.parse_args()
 
     # process the model (with the dictionary)
@@ -300,7 +318,7 @@ if __name__ == '__main__':
             name_width = len(m.stateType[i])
 
     # generate an appropriate output format
-    f = OutputFormat(name=name_width)
+    f = OutputFormat(name=name_width, hires=opts.high, lores=opts.low)
 
     # generate a set of standard reports
     state_report(states, m, f)
