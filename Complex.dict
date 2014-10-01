@@ -1,0 +1,31 @@
+#
+# rate values generated 10/01/2014 13:43:35 by Complex.py
+#
+# parameter        	            FITs
+# ---------        	           -----
+1*PS_fail        	            1642	# second power supply failure rate
+1*ctlr_fail      	            4000	# failure rate for second controller board hardware
+1*s/w_fail       	           28519	# 
+1*s/w_hard       	             285	# rate of second unrecoverable single controller failures
+2*PS_fail        	            3284	# first power supply failure rate
+2*ctlr_fail      	            8000	# failure rate for (any) controller board hardware
+2*s/w_double     	            2851	# s/w falures that take down all controllers
+2*s/w_double_hard	              28	# rate of unrecoverable s/w failures that take both controllers down
+2*s/w_fail       	           57038	# failure rate for (any) controller software
+2*s/w_hard       	             570	# rate of unrecoverable single controller failures
+3*fan_fail       	            1854	# second fan failure rate
+3*switch_fail    	             120	# failure rate for second cross controller switches
+4*fan_fail       	            2472	# first fan failure rate
+4*switch_fail    	             160	# failure rate for any large cross controller switches
+5*IOM_fail       	            2200	# second IOM failure rate
+5*SCM_fail       	             300	# second SCM failure rate
+6*IOM_fail       	            2640	# failure rate for (any part of) an any IOM card
+6*SCM_fail       	             360	# failure rate for (any part of) an any SCM card
+6*SSD_fail       	             240	# failure rate for (any part of) any SSD card
+emergency_h/w    	       166666666	# rate for (emergency) board replacement
+emergency_s/w    	        41666666	# rate to (emergency) diagnose and fix a hard s/w failure
+rplc_SSD         	        83333333	# rate to (emergency) remove, repopulate and replace an SSD board
+rplc_board       	        41666666	# rate for (non-emergency) board replacement
+rplc_module      	        41666666	# rate for (non-emergency) module replacement
+s/w_reboot       	     30000000000	# controller software hard restart rate
+s/w_restart      	     60000000000	# controller software soft restart rate

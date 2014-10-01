@@ -1,0 +1,127 @@
+# Complex - a steady-state Markov availability model for a complex system
+#
+# Format:
+#	This is a graphvis directed graph, augmented with class/rate attributes
+#
+#	The rates are sufficiently complex that they must be expressions
+#	rather than values.  So I wrote a program (Complex.py) to produce the 
+#	data values that are plugged into the model.
+#
+# processing this file:
+#	to draw the graph
+#		dot -O -T png Complex
+#	to solve the model
+#		python Complex.py > Complex.dict
+#		python MarkovTest.py Complex Complex.dict
+#
+# modeling notes:
+#
+#	Since this is a Markov (rather than a Petri-net) model, it is not
+#	practical to model all possible combinations of failures.  So I
+#	chose to model:
+#		all single failures
+#		all double-failures of a single resource type
+#		all critical two-failure combinations
+#	
+#	After examining these results, I concluded that there was no need
+#	to model additional (heterogenous) combinations of h/w failures:
+#		(a) all seemed likely to have occupancies < 10E-8
+#		(b) none of them would result in down-time
+#
+digraph vPARS {	
+	// general graphical layout parameters
+	rankdir=LR;					// left-to-right flow
+	// size="8,5"					// standard page width	
+	node [ fixedsize = true, height = 1.25 ];
+
+	// fully operational
+	node [ shape = doublecircle color = green ];
+		"UP"			[ state = "up" performance="1.0" ];
+
+	node [ shape = circle color = orange ];		// still in service
+		// in service with reduced reliability
+		"fan-1"			[ state = "compromised", performance="1.0" ];
+		"power-1"		[ state = "compromised", performance="1.0" ];
+
+		// in service with reduced throughput
+		"IOM-1"			[ state = "degraded" performance=".85" ];
+		"SCM-1"			[ state = "degraded" performance=".85" ];
+		"swtch-1"		[ state = "degraded" performance=".75" ];
+		"IOM-2"			[ state = "degraded" performance=".60" ];
+		"SCM-2"			[ state = "degraded" performance=".60" ];
+		"swtch-2"		[ state = "degraded" performance=".50" ];
+		"ctlr-1"		[ state = "degraded" performance=".50" ];
+		"s/w-1"			[ state = "degraded" performance=".50" ];
+		"s/w-1H"		[ state = "degraded" performance=".50" ];
+
+		// in service with reduced data redundancy
+
+
+	node [ shape = doublecircle color = red ];	// out of service
+		// unscheduled down time
+		"no fans"		[ state = "failed" performance="0" ];
+		"no power"		[ state = "failed" performance="0" ];
+		"SSD-1"			[ state = "failed" performance="0" ];
+		"SSD-2"			[ state = "failed" performance="0" ];
+		"ctlr-2"		[ state = "failed" performance="0" ];
+		"s/w-2"			[ state = "failed" performance="0" ];
+		"s/w-2H"		[ state = "failed" performance="0" ];
+		"s/w-HS"		[ state = "failed" performance="0" ];
+
+	// Failure Rates
+		// primary (single event) failures
+		"UP" -> "IOM-1"		[ label = "6*IOM_fail" ];
+		"UP" -> "SCM-1"		[ label = "6*SCM_fail" ];
+		"UP" -> "SSD-1"		[ label = "6*SSD_fail" ];
+		"UP" -> "swtch-1"	[ label = "4*switch_fail" ];
+		"UP" -> "ctlr-1" 	[ label = "2*ctlr_fail" ];
+		"UP" -> "fan-1"	 	[ label = "4*fan_fail" ];
+		"UP" -> "power-1"	[ label = "2*PS_fail" ];
+		"UP" -> "s/w-1"	 	[ label = "2*s/w_fail" ];
+		"UP" -> "s/w-1H"	[ label = "2*s/w_hard" ]
+		"UP" -> "s/w-2"	 	[ label = "2*s/w_double" ];
+		"UP" -> "s/w-2H"	[ label = "2*s/w_double_hard" ]
+
+		// double (two event) failures of a single resource
+		"IOM-1" -> "IOM-2"	[ label = "5*IOM_fail" ]
+		"SCM-1" -> "SCM-2"	[ label = "5*SCM_fail" ]
+		"SSD-1" -> "SSD-2"	[ label = "5*SSD_fail" ]
+		"swtch-1" -> "swtch-2"	[ label = "3*switch_fail" ]
+		"ctlr-1" -> "ctlr-2"	[ label = "1*ctlr_fail" ]
+		"fan-1" -> "no fans"	[ label = "3*fan_fail" ]
+		"power-1" -> "no power"	[ label = "1*PS_fail" ]
+		"s/w-1" -> "s/w-2"	[ label = "1*s/w_fail" ]
+		"s/w-1H" -> "s/w-2H"	[ label = "1*s/w_hard" ]
+		"s/w-1" -> "s/w-HS"	[ label = "1*s/w_hard" ]
+		"s/w-1H" -> "s/w-HS"	[ label = "1*s/w_fail" ]
+
+		// other compound failures with > 1s/year of down time
+
+		// other critical compound failures
+
+	// Recovery Rates
+		// automatic recoveries
+		"s/w-1" -> "UP"		[ label = "s/w_restart" ]
+		"s/w-2" -> "UP"		[ label = "s/w_reboot" ]
+		"s/w-HS"-> "s/w-1H"	[ label = "s/w_reboot" ]
+
+		// repair with zero down time
+		"IOM-1" -> "UP"		[ label = "rplc_module" ]
+		"IOM-2" -> "UP"		[ label = "rplc_module" ]
+		"SCM-1" -> "UP"		[ label = "rplc_board" ]
+		"SCM-2" -> "UP"		[ label = "rplc_board" ]
+		"swtch-1" -> "UP"	[ label = "rplc_board" ]
+		"swtch-2" -> "UP"	[ label = "rplc_board" ]
+		"ctlr-1" -> "UP"	[ label = "rplc_board" ]
+		"fan-1" -> "UP"		[ label = "rplc_module" ]
+		"power-1" -> "UP"	[ label = "rplc_module" ]
+		"s/w-1H" -> "UP"	[ label = "emergency_s/w" ]
+
+		// repair with down time
+		"SSD-1" -> "UP"		[ label = "rplc_SSD" ]
+		"SSD-2" -> "UP"		[ label = "rplc_SSD" ]
+		"ctlr-2" -> "UP"	[ label = "emergency_h/w" ]
+		"no fans" -> "UP"	[ label = "emergency_h/w" ]
+		"no power" -> "UP"	[ label = "emergency_h/w" ]
+		"s/w-2H" -> "UP"	[ label = "emergency_s/w" ]
+}
