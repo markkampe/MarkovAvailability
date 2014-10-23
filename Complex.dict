@@ -1,5 +1,5 @@
 #
-# rate values generated 10/01/2014 13:43:35 by Complex.py
+# rate values generated 10/23/2014 13:53:42 by Complex.py
 #
 # parameter        	            FITs
 # ---------        	           -----
@@ -19,6 +19,7 @@
 4*switch_fail    	             160	# failure rate for any large cross controller switches
 5*IOM_fail       	            2200	# second IOM failure rate
 5*SCM_fail       	             300	# second SCM failure rate
+5*SSD_fail       	             200	# second SSD failure rate
 6*IOM_fail       	            2640	# failure rate for (any part of) an any IOM card
 6*SCM_fail       	             360	# failure rate for (any part of) an any SCM card
 6*SSD_fail       	             240	# failure rate for (any part of) any SSD card
