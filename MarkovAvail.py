@@ -165,7 +165,7 @@ class MarkovAvail:
         nodes = graph.get_node_list()
         for n in nodes:
             name = unquote(n.get_name())
-            if name is not 'node':
+            if name != 'node':
                 # capture per-state attributes the client might want
                 t = unquote(n.get('state'))
                 p = unquote(n.get('performance'))
@@ -220,7 +220,7 @@ class MarkovAvail:
         if self.debug > 1:
             print("\nDEBUG: Raw Transition Rates:")
             for i in range(self.numstates):
-                print self.rates[i]
+                print(self.rates[i])
 
     def solve(self):
         """
@@ -254,10 +254,10 @@ class MarkovAvail:
         if self.debug > 1:
             print("\nDEBUG: Equations:")
             for i in range(self.numstates):
-                print eqns[i]
+                print(eqns[i])
             print("\nDEBUG: Inverse:")
             for i in range(self.numstates):
-                print inv[i]
+                print(inv[i])
 
         # copy the Matrix solutions back into lists for the client
         self.occupancy = [0 for x in range(self.numstates)]

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 #   sample program to process a Markov Availability model and print out a
 #   series of reports based on the solution.
