@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 #   This takes a basic system configuration and time/rate parameters,
 #   computes the implied state transition rates, and generates a
