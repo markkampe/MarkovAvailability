@@ -92,3 +92,20 @@ Files:
 	MarkovTest.py	a sample application using the MarkovAvail class
 	Tires		a sample availability model
 	Tires.dict	an external data dictionary for transition rates
+
+#### PROBLEM ###
+	In 2024 I updated MarkovAvail.py to use pydotplus and be more python3.
+		./MarkovTest.py Complex Complex.dict	... seems to work
+		./MarkovTest.py Tires Tires.dict	... now fails
+
+		It dies on a numpy.linalg.LinAlgError:Singular Matrix
+		I spent a little while looking at it
+
+			./MarkovTest.py -d2 Tires Tires.dict
+
+		and the problem was not obvious (to me).  My wild guess
+		is that a new implementation of numpy matrix inversion
+		does new tests that this matrix now fails.  If I ever
+		want to use this again, I should spend a while getting
+		deeper into what numpy doesn't like about my matrix and
+		why my matrix looks like that.

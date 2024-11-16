@@ -250,11 +250,12 @@ class MarkovAvail:
 
         # now solve the system of equations
         m = matrix(eqns)
-        inv = m.I
         if self.debug > 1:
             print("\nDEBUG: Equations:")
             for i in range(self.numstates):
                 print(eqns[i])
+        inv = m.I
+        if self.debug > 1:
             print("\nDEBUG: Inverse:")
             for i in range(self.numstates):
                 print(inv[i])
