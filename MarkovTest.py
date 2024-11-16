@@ -189,7 +189,7 @@ def class_report(markov, format):
                 cap[t] = occupancy * float(markov.stateCap[i])
 
     # get an occupancy sorted list of availability classes
-    sortedClasses = sorted(occ.iteritems(),
+    sortedClasses = sorted(occ.items(),
                            key=operator.itemgetter(1),
                            reverse=True)
 

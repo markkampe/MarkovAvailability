@@ -326,7 +326,7 @@ def processFile(filename, dictionary=None, debug=0):
     for i in range(m.numstates):
         o = m.occupancy[i]
         stateOccupancies[i] = o
-    sortedStates = sorted(stateOccupancies.iteritems(),
+    sortedStates = sorted(stateOccupancies.items(),
                           key=operator.itemgetter(1),
                           reverse=True)
 
