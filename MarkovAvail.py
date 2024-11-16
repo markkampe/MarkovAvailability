@@ -4,7 +4,7 @@
 """
 
 
-import pydot                # pydot file parser
+import pydotplus            # pydot file parser
 import operator             # list sorting
 from numpy import matrix    # matrix inversion
 
@@ -294,7 +294,7 @@ def processFile(filename, dictionary=None, debug=0):
             list: sorted (state #, occupancy) tupples
     """
     # process the input file
-    g = pydot.graph_from_dot_file(filename)
+    g = pydotplus.graphviz.graph_from_dot_file(filename)
 
     # process the dictionary
     valueDict = {}
